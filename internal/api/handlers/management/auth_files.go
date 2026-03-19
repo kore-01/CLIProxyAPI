@@ -45,10 +45,19 @@ var lastRefreshKeys = []string{"last_refresh", "lastRefresh", "last_refreshed_at
 const (
 	anthropicCallbackPort = 54545
 	geminiCallbackPort    = 8085
-	codexCallbackPort     = 1455
 	geminiCLIEndpoint     = "https://cloudcode-pa.googleapis.com"
 	geminiCLIVersion      = "v1internal"
 )
+
+// getCodexCallbackPort returns the Codex callback port from env or default
+func getCodexCallbackPort() int {
+	if port := os.Getenv("CODEX_CALLBACK_PORT"); port != "" {
+		if p, err := strconv.Atoi(port); err == nil {
+			return p
+		}
+	}
+	return 1455
+}
 
 type callbackForwarder struct {
 	provider string
@@ -1507,7 +1516,7 @@ func (h *Handler) RequestCodexToken(c *gin.Context) {
 			return
 		}
 		var errStart error
-		if forwarder, errStart = startCallbackForwarder(codexCallbackPort, "codex", targetURL); errStart != nil {
+		if forwarder, errStart = startCallbackForwarder(getCodexCallbackPort(), "codex", targetURL); errStart != nil {
 			log.WithError(errStart).Error("failed to start codex callback forwarder")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to start callback server"})
 			return
@@ -1516,7 +1525,7 @@ func (h *Handler) RequestCodexToken(c *gin.Context) {
 
 	go func() {
 		if isWebUI {
-			defer stopCallbackForwarderInstance(codexCallbackPort, forwarder)
+			defer stopCallbackForwarderInstance(getCodexCallbackPort(), forwarder)
 		}
 
 		// Wait for callback file

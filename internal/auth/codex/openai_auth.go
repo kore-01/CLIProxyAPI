@@ -11,6 +11,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -21,11 +22,18 @@ import (
 
 // OAuth configuration constants for OpenAI Codex
 const (
-	AuthURL     = "https://auth.openai.com/oauth/authorize"
-	TokenURL    = "https://auth.openai.com/oauth/token"
-	ClientID    = "app_EMoamEEZ73f0CkXaXp7hrann"
-	RedirectURI = "http://localhost:1455/auth/callback"
+	AuthURL  = "https://auth.openai.com/oauth/authorize"
+	TokenURL = "https://auth.openai.com/oauth/token"
+	ClientID = "app_EMoamEEZ73f0CkXaXp7hrann"
 )
+
+// GetRedirectURI returns the OAuth redirect URI, using environment variable PORT if set
+func GetRedirectURI() string {
+	if port := os.Getenv("CODEX_CALLBACK_PORT"); port != "" {
+		return "http://localhost:" + port + "/auth/callback"
+	}
+	return "http://localhost:1455/auth/callback"
+}
 
 // CodexAuth handles the OpenAI OAuth2 authentication flow.
 // It manages the HTTP client and provides methods for generating authorization URLs,
@@ -53,7 +61,7 @@ func (o *CodexAuth) GenerateAuthURL(state string, pkceCodes *PKCECodes) (string,
 	params := url.Values{
 		"client_id":                  {ClientID},
 		"response_type":              {"code"},
-		"redirect_uri":               {RedirectURI},
+		"redirect_uri":               {GetRedirectURI()},
 		"scope":                      {"openid email profile offline_access"},
 		"state":                      {state},
 		"code_challenge":             {pkceCodes.CodeChallenge},
@@ -71,7 +79,7 @@ func (o *CodexAuth) GenerateAuthURL(state string, pkceCodes *PKCECodes) (string,
 // It performs an HTTP POST request to the OpenAI token endpoint with the provided
 // authorization code and PKCE verifier.
 func (o *CodexAuth) ExchangeCodeForTokens(ctx context.Context, code string, pkceCodes *PKCECodes) (*CodexAuthBundle, error) {
-	return o.ExchangeCodeForTokensWithRedirect(ctx, code, RedirectURI, pkceCodes)
+	return o.ExchangeCodeForTokensWithRedirect(ctx, code, GetRedirectURI(), pkceCodes)
 }
 
 // ExchangeCodeForTokensWithRedirect exchanges an authorization code for tokens using

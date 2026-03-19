@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -24,7 +26,13 @@ type CodexAuthenticator struct {
 
 // NewCodexAuthenticator constructs a Codex authenticator with default settings.
 func NewCodexAuthenticator() *CodexAuthenticator {
-	return &CodexAuthenticator{CallbackPort: 1455}
+	port := 1455
+	if p := os.Getenv("CODEX_CALLBACK_PORT"); p != "" {
+		if parsed, err := strconv.Atoi(p); err == nil {
+			port = parsed
+		}
+	}
+	return &CodexAuthenticator{CallbackPort: port}
 }
 
 func (a *CodexAuthenticator) Provider() string {
